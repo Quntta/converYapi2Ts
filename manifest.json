@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Yapi转Ts接口复制工具",
+  "version": "1.0",
+  "description": "将Yapi接口转换为Ts接口并添加右键菜单复制功能",
+  "permissions": [
+    "contextMenus",
+    "activeTab",
+    "scripting",
+    "cookies",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "images/icon16.png",
+    "48": "images/icon48.png",
+    "128": "images/icon128.png"
+  }
+}
