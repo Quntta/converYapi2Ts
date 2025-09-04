@@ -1,3 +1,13 @@
+/*
+ * @Author: likunda 980765465@qq.com
+ * @Date: 2025-09-03 10:13:24
+ * @LastEditors: likunda 980765465@qq.com
+ * @LastEditTime: 2025-09-03 14:15:33
+ * @FilePath: \converYapi2Ts\background.js
+ * @Description: 
+ */
+import { copyToClipboard } from './utils.js';
+
 // 创建右键菜单项
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
@@ -10,11 +20,12 @@ chrome.runtime.onInstalled.addListener(() => {
 // 监听右键菜单点击事件
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'copyInterface') {
+    console.log('复制接口', info);
     // 向剪贴板中写入内容
     chrome.scripting.executeScript({
       target: { tabId: tab.id },
       function: copyToClipboard,
-      args: ['复制好内容了！！']
+      args: ['哈哈哈哈']
     });
     
     // 获取当前页面的cookie和localStorage
@@ -22,30 +33,12 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   }
 });
 
-// 复制内容到剪贴板的函数
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    console.log('内容已复制到剪贴板');
-  }).catch(err => {
-    console.error('无法复制内容: ', err);
-    // 降级方案
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      console.log('降级方案: 内容已复制到剪贴板');
-    } catch (err) {
-      console.error('降级方案也失败: ', err);
-    }
-    document.body.removeChild(textArea);
-  });
-}
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // if (message.action === 'pageLoaded') {
+  //   copyToClipboard(message.text);
+  // }
+  console.log('background.js收到消息:', message, sender, sendResponse);
+});
 
 // 获取当前页面的cookie和localStorage信息
 function getCurrentPageInfo(url) {

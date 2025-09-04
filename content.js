@@ -1,4 +1,11 @@
-// content.js - 注入到网页中的脚本
+/*
+ * @Author: likunda 980765465@qq.com
+ * @Date: 2025-09-03 10:13:40
+ * @LastEditors: likunda 980765465@qq.com
+ * @LastEditTime: 2025-09-03 15:27:48
+ * @FilePath: \converYapi2Ts\content.js
+ * @Description: 
+ */
 
 // 当接收到来自background.js的消息时执行
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -18,6 +25,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 定期检查页面加载状态，并向background.js报告
 function reportPageStatus() {
+  console.log('reportPageStatus', document.readyState);
   if (document.readyState === 'complete') {
     chrome.runtime.sendMessage({ 
       type: 'pageLoaded',

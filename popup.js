@@ -1,11 +1,11 @@
-// popup.js - 处理弹出页面的逻辑
+import { copyToClipboard, escapeHtml } from './utils.js';
 
 // 页面加载完成后执行
 document.addEventListener('DOMContentLoaded', () => {
   // 获取当前活动标签页的信息
   getCurrentTabInfo();
   // 绑定复制按钮事件
-  document.getElementById('copyLocalStorage').addEventListener('click', copyLocalStorageData);
+  // document.getElementById('copyLocalStorage').addEventListener('click', copyLocalStorageData);
   document.getElementById('copyCookies').addEventListener('click', copyCookiesData);
 });
 
@@ -29,7 +29,7 @@ function getCurrentTabInfo() {
       getCookies(domain);
       
       // 从本地存储获取localStorage信息
-      getLocalStorageData();
+      // getLocalStorageData();
     }
   });
 }
@@ -151,6 +151,7 @@ function copyLocalStorageData() {
 
 // 复制cookie数据到剪贴板
 function copyCookiesData() {
+  console.log('copyCookiesData');
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs && tabs[0]) {
       const url = tabs[0].url;
@@ -168,37 +169,4 @@ function copyCookiesData() {
       });
     }
   });
-}
-
-// 复制文本到剪贴板的通用函数
-function copyToClipboard(text, successMessage) {
-  navigator.clipboard.writeText(text).then(() => {
-    alert(successMessage);
-  }).catch(err => {
-    console.error('复制失败: ', err);
-    // 降级方案
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    try {
-      document.execCommand('copy');
-      alert(successMessage);
-    } catch (err) {
-      console.error('降级方案也失败: ', err);
-      alert('复制失败，请手动复制');
-    }
-    document.body.removeChild(textArea);
-  });
-}
-
-// HTML转义函数
-function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
 }
