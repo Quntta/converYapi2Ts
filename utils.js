@@ -2,7 +2,7 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 11:44:10
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-03 13:44:47
+ * @LastEditTime: 2025-09-05 18:27:52
  * @FilePath: \converYapi2Ts\utils.js
  * @Description: 
  */
@@ -58,4 +58,20 @@ export function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+export function getEffectUrl () {
+  // 从缓存中获取
+  const effectUrl = localStorage.getItem('effectUrl');
+  if (effectUrl) {
+    return effectUrl;
+  }
+}
+
+export function getDoMain () {
+  // 从当前域名获取
+  const doMain = window.location.hostname;
+  if (doMain) {
+    return doMain;
+  }
 }

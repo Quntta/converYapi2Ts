@@ -2,10 +2,11 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 10:13:40
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-03 15:27:48
+ * @LastEditTime: 2025-09-05 18:28:29
  * @FilePath: \converYapi2Ts\content.js
  * @Description: 
  */
+import { getEffectUrl, getDoMain } from './utils.js';
 
 // 当接收到来自background.js的消息时执行
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -25,6 +26,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // 定期检查页面加载状态，并向background.js报告
 function reportPageStatus() {
+  const effectUrl = getEffectUrl();
+  const doMain = getDoMain();
+  console.log('effectUrl', effectUrl);
+  console.log('doMain', doMain);
   console.log('reportPageStatus', document.readyState);
   if (document.readyState === 'complete') {
     chrome.runtime.sendMessage({ 
