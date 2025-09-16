@@ -2,7 +2,7 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 11:44:10
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-15 20:07:56
+ * @LastEditTime: 2025-09-16 15:31:18
  * @FilePath: \converYapi2Ts\utils.js
  * @Description:
  */
@@ -157,8 +157,46 @@ export function getLocalStorage(keys = null) {
   });
 }
 
-export function getSingleCacheById(id) {
-  return getLocalStorage(`single_${id}`);
+
+/**
+ * @description: 从缓存中获取数据,支持全查和根据key精准查询
+ * @param {*} key 缓存key
+ * @param {*} uniqueKey 唯一key
+ * @param {*} uniqueValue 唯一value
+ * @return {*}
+ */
+export async function handleGetCacheData(key, uniqueKey = '', uniqueValue = '') {
+  const cacheData = await getLocalStorage(key);
+  if (!cacheData[key]) {
+    return null
+  }
+  if (uniqueKey) {
+    const hasCache = cacheData[key].find(item => item[uniqueKey] === uniqueValue)
+    if (hasCache) {
+      return hasCache
+    } else {
+      return null
+    }
+  }
+  return cacheData[key]
 }
 
-// 类型生成相关函数已移至typeMapping.js文件
+/**
+ * @description: 向缓存中设置数据,支持根据key精准查询是否存在,存在则不重复设置
+ * @param {*} key 缓存key
+ * @param {*} data 缓存数据
+ * @param {*} uniqueKey 唯一key
+ * @return {*}
+ */
+export async function handleSetCacheData(key, data, uniqueKey) {
+  const cacheData = await handleGetCacheData(key)
+  if (!cacheData) {
+    await setLocalStorage(key, [data])
+    return
+  }
+  const hasCache = cacheData.find(item => item[uniqueKey] === data[uniqueKey])
+  if (hasCache) {
+    return
+  }
+  await setLocalStorage(key, [...cacheData, data])
+}

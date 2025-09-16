@@ -2,7 +2,7 @@
  * 类型映射工具 - 将Java数据类型映射到JavaScript数据类型
  * 用于Yapi转TypeScript接口过程中的类型转换
  */
-import { getLocalStorage, projectCacheKey } from './utils.js';
+import { getLocalStorage, projectCacheKey, handleGetCacheData } from './utils.js';
 
 /**
  * Java类型到JavaScript类型的映射表
@@ -164,6 +164,37 @@ export function getTsTypeFromSchema(fieldSchema) {
 }
 
 /**
+ * 生成属性的TypeScript接口代码
+ * @param {Object} properties - 属性对象
+ * @param {string} indent - 缩进字符串
+ * @param {Array<string>} requiredFields - 必填字段数组
+ * @param {Function} customRequiredCheck - 自定义必填字段检查函数
+ * @returns {string} 生成的接口代码
+ */
+function generatePropertiesCode(properties, indent = '  ', requiredFields = [], customRequiredCheck = null) {
+  let code = '';
+
+  if (!properties) return code;
+
+  for (const [fieldName, fieldSchema] of Object.entries(properties)) {
+    const tsType = getTsTypeFromSchema(fieldSchema);
+    const description = fieldSchema.description ? ` // ${fieldSchema.description}` : '';
+
+    // 确定字段是否为必填
+    let isRequired = false;
+    if (customRequiredCheck) {
+      isRequired = customRequiredCheck(fieldName, fieldSchema);
+    } else if (requiredFields.length > 0) {
+      isRequired = requiredFields.includes(fieldName);
+    }
+
+    code += `${indent}${fieldName}${isRequired ? '' : '?'}: ${tsType};${description}\n`;
+  }
+
+  return code;
+}
+
+/**
  * 从JSON Schema生成TypeScript接口
  * @param {string} interfaceName - 接口名称
  * @param {Object} schema - JSON Schema对象
@@ -179,14 +210,8 @@ export function generateInterfaceFromSchema(interfaceName, schema, originalSchem
   let interfaceContent = `export interface ${interfaceName} {\n`;
   const requiredFields = schema.required || [];
 
-  // 遍历所有属性
-  for (const [fieldName, fieldSchema] of Object.entries(schema.properties)) {
-    const isRequired = requiredFields.includes(fieldName);
-    const tsType = getTsTypeFromSchema(fieldSchema);
-    const description = fieldSchema.description ? ` // ${fieldSchema.description}` : '';
-
-    interfaceContent += `  ${fieldName}${isRequired ? '' : '?'}: ${tsType};${description}\n`;
-  }
+  // 使用通用函数生成属性代码
+  interfaceContent += generatePropertiesCode(schema.properties, '  ', requiredFields);
 
   interfaceContent += '}';
   return interfaceContent;
@@ -204,15 +229,8 @@ function handleListItemsResponse(dataSchema) {
     if (dataSchema.list.items.properties) {
       const itemProperties = dataSchema.list.items.properties;
 
-      // 遍历items的所有属性
-      for (const [fieldName, fieldSchema] of Object.entries(itemProperties)) {
-        const tsType = getTsTypeFromSchema(fieldSchema);
-        const description = fieldSchema.description ? ` // ${fieldSchema.description}` : '';
-        // 除了id外，其他字段都设为可选
-        const isRequired = fieldName === 'id';
-
-        interfaceContent += `  ${fieldName}${isRequired ? '' : '?'}: ${tsType};${description}\n`;
-      }
+      // 使用通用函数，自定义必填字段检查（只有id是必填）
+      interfaceContent += generatePropertiesCode(itemProperties, '  ', [], (fieldName) => fieldName === 'id');
     } else if (dataSchema.list.items.type) {
       // 处理items是基本类型的情况
       const itemType = getTsTypeFromSchema(dataSchema.list.items);
@@ -235,12 +253,8 @@ function handleObjectResponse(dataSchema) {
   let interfaceContent = '';
 
   if (dataSchema.properties) {
-    // 遍历data对象的所有属性
-    for (const [fieldName, fieldSchema] of Object.entries(dataSchema.properties)) {
-      const tsType = getTsTypeFromSchema(fieldSchema);
-      const description = fieldSchema.description ? ` // ${fieldSchema.description}` : '';
-      interfaceContent += `  ${fieldName}?: ${tsType};${description}\n`;
-    }
+    // 使用通用函数生成属性代码
+    interfaceContent += generatePropertiesCode(dataSchema.properties, '  ');
   } else {
     interfaceContent += '  // 无法解析data对象结构\n';
   }
@@ -275,12 +289,8 @@ function handleNestedObjectResponse(dataSchema) {
         const nestedInterfaceName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
         let nestedInterfaceContent = `export interface ${nestedInterfaceName} {\n`;
 
-        // 遍历嵌套对象的属性
-        for (const [nestedFieldName, nestedFieldSchema] of Object.entries(fieldSchema.properties)) {
-          const nestedTsType = getTsTypeFromSchema(nestedFieldSchema);
-          const nestedDescription = nestedFieldSchema.description ? ` // ${nestedFieldSchema.description}` : '';
-          nestedInterfaceContent += `  ${nestedFieldName}?: ${nestedTsType};${nestedDescription}\n`;
-        }
+        // 使用通用函数生成嵌套对象的属性代码
+        nestedInterfaceContent += generatePropertiesCode(fieldSchema.properties, '  ');
 
         nestedInterfaceContent += '}\n\n';
         extraInterfaces += nestedInterfaceContent;
@@ -312,12 +322,8 @@ function handleArrayResponse(dataSchema) {
       interfaceContent += '  // data是对象数组\n';
       interfaceContent += '  items?: Array<{\n';
 
-      // 遍历数组元素对象的属性
-      for (const [fieldName, fieldSchema] of Object.entries(dataSchema.items.properties)) {
-        const tsType = getTsTypeFromSchema(fieldSchema);
-        const description = fieldSchema.description ? ` // ${fieldSchema.description}` : '';
-        interfaceContent += `    ${fieldName}?: ${tsType};${description}\n`;
-      }
+      // 使用通用函数，增加缩进级别
+      interfaceContent += generatePropertiesCode(dataSchema.items.properties, '    ');
 
       interfaceContent += '  }>;\n';
     } else {
@@ -405,14 +411,16 @@ export function generateVOInterfaceFromSchema(schema) {
  */
 export async function generateTypeScriptTypes(apiData) {
   try {
-    const projectData = await getLocalStorage(projectCacheKey);
-    const basepath = projectData[projectCacheKey].basepath || ''
     // 提取基本信息
     const { data } = apiData;
+    const projectData = await handleGetCacheData(projectCacheKey, 'id', data.project_id)
+    const basepath = projectData.basepath || ''
     const url = basepath + data.path
     const method = data.method;
     const id = data._id;
     const catid = data.catid;
+    const title = data.title;
+    const projectid = data.project_id;
 
     // 解析请求体JSON Schema生成DTO
     let dtoSchema = null;
@@ -445,6 +453,8 @@ export async function generateTypeScriptTypes(apiData) {
       method,
       id,
       catid,
+      projectid,
+      title,
       DTO: dtoInterface,
       VO: voInterface
     };

@@ -2,7 +2,7 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 10:13:40
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-12 09:46:55
+ * @LastEditTime: 2025-09-16 14:04:02
  * @FilePath: \converYapi2Ts\content.js
  * @Description:
  */
@@ -11,6 +11,7 @@
 let lastReportedTime = 0;
 const MIN_INTERVAL = 1000; // 最小发送间隔1秒
 let lastReportedUrl = '';
+let observer = null;
 
 // 定期检查页面加载状态，并向background.js报告
 function reportPageStatus() {
@@ -19,17 +20,24 @@ function reportPageStatus() {
   if (now - lastReportedTime < MIN_INTERVAL || lastReportedUrl === window.location.href) {
     return;
   }
-  
+
   if (document.readyState === 'complete') {
     lastReportedTime = now;
     lastReportedUrl = window.location.href;
-    chrome.runtime.sendMessage({
-      type: 'pageLoaded',
-      url: window.location.href,
-      domain: window.location.hostname,
-      origin: window.location.origin,
-    });
-    console.log('content.js发送消息:', window.location.href);
+
+    try {
+      // 尝试发送消息，如果扩展上下文已失效则捕获错误
+      console.log(chrome.runtime.sendMessage)
+      chrome.runtime.sendMessage({
+        type: 'pageLoaded',
+        url: window.location.href,
+        domain: window.location.hostname,
+        origin: window.location.origin,
+      });
+      console.log('content.js发送消息:', window.location.href);
+    } catch (error) {
+      console.warn('发送消息失败，扩展上下文可能已失效:', error);
+    }
   }
 }
 
@@ -39,7 +47,7 @@ window.addEventListener('load', reportPageStatus);
 // 初始化lastHref
 window.lastHref = window.location.href;
 
-const observer = new MutationObserver((mutations) => {
+observer = new MutationObserver((mutations) => {
   // 检查URL是否变化
   if (window.lastHref !== window.location.href) {
     window.lastHref = window.location.href;
@@ -51,4 +59,12 @@ const observer = new MutationObserver((mutations) => {
 observer.observe(document, {
   childList: true,
   subtree: true
+});
+
+// 页面卸载时清理资源，防止在页面卸载后尝试发送消息
+window.addEventListener('beforeunload', () => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
 });

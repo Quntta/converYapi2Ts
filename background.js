@@ -2,15 +2,17 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 10:13:24
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-15 20:08:03
+ * @LastEditTime: 2025-09-16 15:58:02
  * @FilePath: \converYapi2Ts\background.js
  * @Description:
  */
-import { copyToClipboard, getLocalStorage, setLocalStorage, getUrlType, cacheKey, projectCacheKey } from './utils.js';
+import { copyToClipboard, getUrlType, cacheKey, projectCacheKey, handleGetCacheData, handleSetCacheData } from './utils.js';
 import { getSingleInterfaceApi, getGroupInterfaceApi, getProjectBaseApi } from './getInterFace.js';
 import { generateTypeScriptTypes } from './typeMapping.js';
 
 var urlObj = null
+var urlType = null
+var extraFn = null
 // 创建右键菜单项
 chrome.runtime.onInstalled.addListener(() => {
   // chrome.contextMenus.create({
@@ -48,30 +50,35 @@ chrome.runtime.onInstalled.addListener(() => {
 });
 
 // 监听右键菜单点击事件
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'copyAsTs') {
-    getLocalStorage(cacheKey).then(data => {
-      console.log('获取到的存储数据:', data[cacheKey]);
-    });
-    // setLocalStorage('yapi2ts', [])
+    if (urlType && urlType.type === 'single') {
+      const data = await handleGetCacheData(cacheKey, 'id', urlType.id)
+      if (data) {
+        const copyText = data.DTO + '\n\n' + data.VO
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: copyToClipboard,
+          args: [copyText]
+        });
+      }
+    }
   }
-  if (info.menuItemId === 'copyInterface') {
-    console.log('复制接口', info);
-    // 向剪贴板中写入内容
-    setTimeout(() => {
-      chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        function: copyToClipboard,
-        args: ['gagaga111']
-      });
-    }, 1000);
-    getLocalStorage('yapi2ts').then(data => {
-      console.log('获取到的存储数据:', data);
-    });
-    setLocalStorage('yapi2ts', [])
-    // 获取当前页面的cookie和localStorage
-    // getCurrentPageInfo(tab.url);
-  }
+  // if (info.menuItemId === 'copyInterface') {
+  //   console.log('复制接口', info);
+  //   // 向剪贴板中写入内容
+  //   setTimeout(() => {
+  //     chrome.scripting.executeScript({
+  //       target: { tabId: tab.id },
+  //       function: copyToClipboard,
+  //       args: ['gagaga111']
+  //     });
+  //   }, 1000);
+  //   getLocalStorage('yapi2ts').then(data => {
+  //     console.log('获取到的存储数据:', data);
+  //   });
+  //   setLocalStorage('yapi2ts', [])
+  // }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -86,70 +93,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 async function handleSetInterface() {
   if (!urlObj) return;
-  const urlType = getUrlType(urlObj.url);
+  urlType = getUrlType(urlObj.url);
   // 查询项目信息并缓存，在拼接url的时候有用
   await handleGetProjectInfo()
   if (!urlType) return;
   if (urlType.type === 'single') {
-    handleSetSingle(urlType)
+    handleSetSingle()
   } else if (urlType.type === 'group') {
-    handleSetGroup(urlType)
+    handleSetGroup()
   }
 }
 
-async function handleGetCacheData() {
-  const cacheData = await getLocalStorage(cacheKey);
-  if (!cacheData[cacheKey]) {
-    return null
-  }
-  return cacheData[cacheKey]
-}
-
-async function handleGetSingle(id) {
-  const data = await handleGetCacheData()
-  console.log('data', data, 'id', id);
-  if (!data) {
-    return null
-  }
-  const hasCache = data.find(item => item.id === id)
-  if (hasCache) {
-    return hasCache
-  }
-  return null
-}
-
-async function handleGetGroup(catid) {
-  const data = await handleGetCacheData()
-  if (!data) {
-    return null
-  }
-  const hasCache = data.filter(item => item.catid === catid)
-  if (hasCache) {
-    return hasCache
-  }
-  return null
-}
-
-async function handleSetSingle(urlType) {
-  const hasCache = await handleGetSingle(urlType.id)
+async function handleSetSingle() {
+  const hasCache = await handleGetCacheData(cacheKey, 'id', urlType.id)
   console.log('hasCache', hasCache);
   if (hasCache) {
     return
   }
   const res = await getSingleInterfaceApi(urlType.id, urlObj.origin);
   const result = await generateTypeScriptTypes(res)
-  const data = await handleGetCacheData()
-  if (!data) {
-    setLocalStorage(cacheKey, [result])
-    return
-  } else {
-    setLocalStorage(cacheKey, [...data, result])
-  }
+  await handleSetCacheData(cacheKey, result, 'id')
   console.log('获取到的单个接口数据:', res, '转换数据:', result);
 }
 
-async function handleSetGroup(urlType) {
-  const hasCache = await handleGetGroup(urlType.catid)
+async function handleSetGroup() {
+  const hasCache = await handleGetCacheData(cacheKey, 'catid', urlType.catid)
   if (hasCache) {
     return
   }
@@ -164,15 +132,15 @@ async function handleSetGroup(urlType) {
 async function handleGetProjectInfo() {
   const id = urlObj.url.split('/')[4]
   const projectId = Number(id)
-  const cacheData = await getLocalStorage(projectCacheKey);
-  if (cacheData[projectCacheKey] && cacheData[projectCacheKey].id === projectId) {
-    return cacheData[projectCacheKey]
+  const cacheData = await handleGetCacheData(projectCacheKey, 'id', projectId)
+  if (cacheData) {
+    return cacheData
   }
   const { data } = await getProjectBaseApi(projectId, urlObj.origin);
-  setLocalStorage(projectCacheKey, {
+  await handleSetCacheData(projectCacheKey, {
     id: data._id,
     ...data
-  })
+  }, 'id')
 }
 
 // 获取当前页面的cookie和localStorage信息
