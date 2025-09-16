@@ -1,6 +1,10 @@
-/**
- * API请求工具 - 封装fetch请求
- * 提供get和post方法用于网络请求
+/*
+ * @Author: likunda 980765465@qq.com
+ * @Date: 2025-09-04 13:48:07
+ * @LastEditors: likunda 980765465@qq.com
+ * @LastEditTime: 2025-09-12 09:56:39
+ * @FilePath: \converYapi2Ts\request.js
+ * @Description: 封装fetch请求
  */
 
 /**
@@ -53,6 +57,7 @@ export const get = async (url, params = {}, config = {}) => {
   try {
     const response = await fetch(fullUrl, {
       method: 'GET',
+      credentials: 'include',
       ...BASE_CONFIG,
       ...config,
     });
@@ -76,6 +81,7 @@ export const post = async (url, data = {}, config = {}) => {
     const response = await fetch(url, {
       method: 'POST',
       body: JSON.stringify(data),
+      credentials: 'include',
       ...BASE_CONFIG,
       ...config,
     });
