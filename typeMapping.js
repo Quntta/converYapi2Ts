@@ -119,7 +119,7 @@ export const convertJavaToJsType = (javaType) => {
  * @returns {string} TypeScript类型字符串
  */
 export function getTsTypeFromSchema(fieldSchema) {
-  if (!fieldSchema) return 'any';
+  if (!fieldSchema || !fieldSchema.type) return 'any';
 
   // 处理引用类型
   if (fieldSchema.$ref) {
@@ -201,20 +201,38 @@ function generatePropertiesCode(properties, indent = '  ', requiredFields = [], 
  * @param {string} originalSchema - 原始JSON Schema字符串（用于fallback）
  * @returns {string} 格式化的TypeScript接口字符串
  */
-export function generateInterfaceFromSchema(interfaceName, schema, originalSchema) {
-  if (!schema || !schema.properties) {
-    // 如果没有Schema，返回一个空接口
-    return `export interface ${interfaceName} {\n  // 无法解析JSON Schema\n}`;
+export function generateInterfaceFromSchema(interfaceName, data) {
+  // 解析请求体JSON Schema生成DTO
+  let schema = null;
+  if (data.req_body_is_json_schema && data.req_body_other) {
+    try {
+      schema = JSON.parse(data.req_body_other);
+    } catch (error) {
+      console.error('解析请求体JSON Schema失败:', error);
+    }
+    if (!schema || !schema.properties) {
+      // 如果没有Schema，返回一个空接口
+      return `export interface ${interfaceName} {\n  // 无法解析JSON Schema\n}`;
+    }
+
+    let interfaceContent = `export interface ${interfaceName} {\n`;
+    const requiredFields = schema.required || [];
+
+    // 使用通用函数生成属性代码
+    interfaceContent += generatePropertiesCode(schema.properties, '  ', requiredFields);
+
+    interfaceContent += '}';
+    return interfaceContent;
   }
-
-  let interfaceContent = `export interface ${interfaceName} {\n`;
-  const requiredFields = schema.required || [];
-
-  // 使用通用函数生成属性代码
-  interfaceContent += generatePropertiesCode(schema.properties, '  ', requiredFields);
-
-  interfaceContent += '}';
-  return interfaceContent;
+  if (!data.req_body_is_json_schema && data.req_query && data.req_query.length) {
+    let interfaceContent = `export interface ${interfaceName} {\n`;
+    data.req_query.forEach(item => {
+      interfaceContent += `  ${item.name}${item.required ? '' : '?'}: ${getTsTypeFromSchema(item)};\n`;
+    });
+    interfaceContent += '}';
+    return interfaceContent;
+  }
+  return `export interface ${interfaceName} {\n  // 无参数\n}`;
 }
 
 /**
@@ -339,15 +357,59 @@ function handleArrayResponse(dataSchema) {
   return interfaceContent;
 }
 
+// export interface TestData {
+//   gameId: string
+//   channelSource: string
+//   account: number
+//   list: {
+//     gameAccount: string
+//     gamePassword: string
+//     gameArea: string
+//     gameServer: string
+//     info: {
+//       level: number
+//       vip: number
+//     }
+//     attrs: { key: string; value: string }[]
+//   }[]
+//   extraField?: string
+//   extraData?: {
+//     id: number
+//     info: string
+//     list: { key: string }[]
+//   }
+// }
+
+// 将JSON Schema转换为TypeScript接口
+export function generaterInterface(interfaceName, schema, interfaceContent = '') {
+  // type 为object或array时，需要递归处理， 否则直接转类型即可，array更为特殊，array中子项的schema在items字段下 interfaceContent 为当前接口的内容，在递归时需要传递
+  interfaceContent = !interfaceContent ? `export interface ${interfaceName} {\n` : interfaceContent
+  if (schema.type === 'object' || schema.type === 'array') {
+    // 递归处理
+  }
+}
+
 /**
  * 从响应体JSON Schema生成VO TypeScript接口
  * @param {Object} schema - 响应体JSON Schema对象
  * @returns {string} 格式化的TypeScript接口字符串
  */
-export function generateVOInterfaceFromSchema(schema) {
+export function generateVOInterfaceFromSchema(interfaceName, data) {
+  // 解析响应体JSON Schema生成VO
+  let schema = null;
+  if (data.res_body_is_json_schema && data.res_body) {
+    try {
+      schema = JSON.parse(data.res_body);
+    } catch (error) {
+      schema.error('解析响应体JSON Schema失败:', error);
+    }
+  }
+  if (!schema) {
+    return `export interface ${interfaceName} {\n  // 无法解析响应体结构\n}`;
+  }
   console.log('res--------------------------schema', schema)
   // 默认返回空VO接口
-  let interfaceContent = 'export interface Vo {\n';
+  let interfaceContent = `export interface ${interfaceName} {\n`;
   let extraInterfaces = '';
 
   try {
@@ -360,7 +422,7 @@ export function generateVOInterfaceFromSchema(schema) {
         interfaceContent += handleListItemsResponse(dataSchema.properties);
       }
       // 场景2: { xx: xx, yy: yy } - data本身是一个对象
-      else if (dataSchema.properties && Object.keys(dataSchema.properties).length > 0) {
+      else if (dataSchema.type === 'object' && Object.keys(dataSchema.properties).length > 0) {
         // 检查是否是场景4: data是嵌套对象
         const hasNestedObjects = Object.entries(dataSchema.properties).some(
           ([_, fieldSchema]) => fieldSchema.type === 'object' && fieldSchema.properties
@@ -376,7 +438,8 @@ export function generateVOInterfaceFromSchema(schema) {
       }
       // 场景4: data本身是一个数组
       else if (dataSchema.type === 'array') {
-        interfaceContent += handleArrayResponse(dataSchema);
+        // data本身是数组，只处理数组中的对象就行，不需要给VO的定义中添加array之类的
+        interfaceContent += handleObjectResponse(dataSchema.items);
       }
       // 场景5: data: 123 - data本身是一个基础类型
       else if (dataSchema.type && !dataSchema.properties) {
@@ -422,31 +485,11 @@ export async function generateTypeScriptTypes(apiData) {
     const title = data.title;
     const projectid = data.project_id;
 
-    // 解析请求体JSON Schema生成DTO
-    let dtoSchema = null;
-    if (data.req_body_is_json_schema && data.req_body_other) {
-      try {
-        dtoSchema = JSON.parse(data.req_body_other);
-      } catch (error) {
-        console.error('解析请求体JSON Schema失败:', error);
-      }
-    }
-
-    // 解析响应体JSON Schema生成VO
-    let voSchema = null;
-    if (data.res_body_is_json_schema && data.res_body) {
-      try {
-        voSchema = JSON.parse(data.res_body);
-      } catch (error) {
-        console.error('解析响应体JSON Schema失败:', error);
-      }
-    }
-
     // 生成DTO TypeScript接口
-    const dtoInterface = generateInterfaceFromSchema('DTO', dtoSchema, data.req_body_other);
+    const dtoInterface = generateInterfaceFromSchema('DTO', data);
 
-    // 生成VO TypeScript接口（专注于data.list的items结构）
-    const voInterface = generateVOInterfaceFromSchema(voSchema);
+    // 生成VO TypeScript接口
+    const voInterface = generateVOInterfaceFromSchema('VO', data);
 
     return {
       url,
