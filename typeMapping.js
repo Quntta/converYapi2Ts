@@ -66,6 +66,10 @@ export const javaToJsTypeMap = {
   'char[]': 'Array<string>',
   'byte[]': 'Array<number>',
   'short[]': 'Array<number>',
+
+  // 文件类型
+  'file': 'File',
+  'File': 'File',
 };
 
 /**
@@ -73,45 +77,45 @@ export const javaToJsTypeMap = {
  * @param {string} javaType - Java类型名称
  * @returns {string} 对应的JavaScript类型名称
  */
-export const convertJavaToJsType = (javaType) => {
-  if (!javaType || typeof javaType !== 'string') {
-    return 'any';
-  }
+// export const convertJavaToJsType = (javaType) => {
+//   if (!javaType || typeof javaType !== 'string') {
+//     return 'any';
+//   }
 
-  // 移除可能的包路径前缀
-  const simpleTypeName = javaType.includes('.')
-    ? javaType.substring(javaType.lastIndexOf('.') + 1)
-    : javaType;
+//   // 移除可能的包路径前缀
+//   const simpleTypeName = javaType.includes('.')
+//     ? javaType.substring(javaType.lastIndexOf('.') + 1)
+//     : javaType;
 
-  // 转换为小写进行不区分大小写的匹配
-  const typeKey = simpleTypeName.toLowerCase();
+//   // 转换为小写进行不区分大小写的匹配
+//   const typeKey = simpleTypeName.toLowerCase();
 
-  // 检查是否是泛型集合类型（如List<User>）
-  const genericMatch = simpleTypeName.match(/^([A-Za-z]+)<([^>]+)>$/);
-  if (genericMatch) {
-    const [, collectionType, itemType] = genericMatch;
-    const jsCollectionType = javaToJsTypeMap[collectionType.toLowerCase()] || 'Array';
+//   // 检查是否是泛型集合类型（如List<User>）
+//   const genericMatch = simpleTypeName.match(/^([A-Za-z]+)<([^>]+)>$/);
+//   if (genericMatch) {
+//     const [, collectionType, itemType] = genericMatch;
+//     const jsCollectionType = javaToJsTypeMap[collectionType.toLowerCase()] || 'Array';
 
-    if (jsCollectionType === 'Array') {
-      // 递归转换泛型参数类型
-      const jsItemType = convertJavaToJsType(itemType);
-      return `Array<${jsItemType}>`;
-    }
+//     if (jsCollectionType === 'Array') {
+//       // 递归转换泛型参数类型
+//       const jsItemType = convertJavaToJsType(itemType);
+//       return `Array<${jsItemType}>`;
+//     }
 
-    return jsCollectionType;
-  }
+//     return jsCollectionType;
+//   }
 
-  // 检查是否是数组类型（如User[]）
-  const arrayMatch = simpleTypeName.match(/^([^\[\]]+)\[\]$/);
-  if (arrayMatch) {
-    const [, itemType] = arrayMatch;
-    const jsItemType = convertJavaToJsType(itemType);
-    return `Array<${jsItemType}>`;
-  }
+//   // 检查是否是数组类型（如User[]）
+//   const arrayMatch = simpleTypeName.match(/^([^\[\]]+)\[\]$/);
+//   if (arrayMatch) {
+//     const [, itemType] = arrayMatch;
+//     const jsItemType = convertJavaToJsType(itemType);
+//     return `Array<${jsItemType}>`;
+//   }
 
-  // 返回映射的JavaScript类型，如果没有匹配则返回'any'
-  return javaToJsTypeMap[typeKey] || 'any';
-};
+//   // 返回映射的JavaScript类型，如果没有匹配则返回'any'
+//   return javaToJsTypeMap[typeKey] || 'any';
+// };
 
 /**
  * 根据JSON Schema获取对应的TypeScript类型
@@ -240,122 +244,122 @@ export function generateInterfaceFromSchema(interfaceName, data) {
  * @param {Object} dataSchema - data属性的Schema
  * @returns {string} 生成的接口内容
  */
-function handleListItemsResponse(dataSchema) {
-  let interfaceContent = '';
+// function handleListItemsResponse(dataSchema) {
+//   let interfaceContent = '';
 
-  if (dataSchema.list && dataSchema.list.type === 'array' && dataSchema.list.items) {
-    if (dataSchema.list.items.properties) {
-      const itemProperties = dataSchema.list.items.properties;
+//   if (dataSchema.list && dataSchema.list.type === 'array' && dataSchema.list.items) {
+//     if (dataSchema.list.items.properties) {
+//       const itemProperties = dataSchema.list.items.properties;
 
-      // 使用通用函数，自定义必填字段检查（只有id是必填）
-      interfaceContent += generatePropertiesCode(itemProperties, '  ', [], (fieldName) => fieldName === 'id');
-    } else if (dataSchema.list.items.type) {
-      // 处理items是基本类型的情况
-      const itemType = getTsTypeFromSchema(dataSchema.list.items);
-      interfaceContent += `  // data.list是${itemType}类型的数组\n`;
-      interfaceContent += `  items?: Array<${itemType}>;\n`;
-    }
-  } else {
-    interfaceContent += '  // 无法从响应体中提取列表项结构\n';
-  }
+//       // 使用通用函数，自定义必填字段检查（只有id是必填）
+//       interfaceContent += generatePropertiesCode(itemProperties, '  ', [], (fieldName) => fieldName === 'id');
+//     } else if (dataSchema.list.items.type) {
+//       // 处理items是基本类型的情况
+//       const itemType = getTsTypeFromSchema(dataSchema.list.items);
+//       interfaceContent += `  // data.list是${itemType}类型的数组\n`;
+//       interfaceContent += `  items?: Array<${itemType}>;\n`;
+//     }
+//   } else {
+//     interfaceContent += '  // 无法从响应体中提取列表项结构\n';
+//   }
 
-  return interfaceContent;
-}
+//   return interfaceContent;
+// }
 
 /**
  * 处理data本身是对象的响应体
  * @param {Object} dataSchema - data属性的Schema
  * @returns {string} 生成的接口内容
  */
-function handleObjectResponse(dataSchema) {
-  let interfaceContent = '';
+// function handleObjectResponse(dataSchema) {
+//   let interfaceContent = '';
 
-  if (dataSchema.properties) {
-    // 使用通用函数生成属性代码
-    interfaceContent += generatePropertiesCode(dataSchema.properties, '  ');
-  } else {
-    interfaceContent += '  // 无法解析data对象结构\n';
-  }
+//   if (dataSchema.properties) {
+//     // 使用通用函数生成属性代码
+//     interfaceContent += generatePropertiesCode(dataSchema.properties, '  ');
+//   } else {
+//     interfaceContent += '  // 无法解析data对象结构\n';
+//   }
 
-  return interfaceContent;
-}
+//   return interfaceContent;
+// }
 
 /**
  * 处理data本身是基础类型的响应体
  * @param {Object} dataSchema - data属性的Schema
  * @returns {string} 生成的接口内容
  */
-function handlePrimitiveResponse(dataSchema) {
-  const tsType = getTsTypeFromSchema(dataSchema);
-  return `  // data是${tsType}类型\n  data?: ${tsType};\n`;
-}
+// function handlePrimitiveResponse(dataSchema) {
+//   const tsType = getTsTypeFromSchema(dataSchema);
+//   return `  // data是${tsType}类型\n  data?: ${tsType};\n`;
+// }
 
 /**
  * 处理data本身是嵌套对象的响应体，生成多个接口
  * @param {Object} dataSchema - data属性的Schema
  * @returns {Object} 包含主接口内容和额外接口的对象
  */
-function handleNestedObjectResponse(dataSchema) {
-  let mainInterfaceContent = '';
-  let extraInterfaces = '';
+// function handleNestedObjectResponse(dataSchema) {
+//   let mainInterfaceContent = '';
+//   let extraInterfaces = '';
 
-  if (dataSchema.properties) {
-    // 遍历data对象的所有属性
-    for (const [fieldName, fieldSchema] of Object.entries(dataSchema.properties)) {
-      if (fieldSchema.type === 'object' && fieldSchema.properties) {
-        // 为嵌套对象生成单独的接口
-        const nestedInterfaceName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
-        let nestedInterfaceContent = `export interface ${nestedInterfaceName} {\n`;
+//   if (dataSchema.properties) {
+//     // 遍历data对象的所有属性
+//     for (const [fieldName, fieldSchema] of Object.entries(dataSchema.properties)) {
+//       if (fieldSchema.type === 'object' && fieldSchema.properties) {
+//         // 为嵌套对象生成单独的接口
+//         const nestedInterfaceName = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+//         let nestedInterfaceContent = `export interface ${nestedInterfaceName} {\n`;
 
-        // 使用通用函数生成嵌套对象的属性代码
-        nestedInterfaceContent += generatePropertiesCode(fieldSchema.properties, '  ');
+//         // 使用通用函数生成嵌套对象的属性代码
+//         nestedInterfaceContent += generatePropertiesCode(fieldSchema.properties, '  ');
 
-        nestedInterfaceContent += '}\n\n';
-        extraInterfaces += nestedInterfaceContent;
+//         nestedInterfaceContent += '}\n\n';
+//         extraInterfaces += nestedInterfaceContent;
 
-        // 在主接口中引用嵌套接口
-        mainInterfaceContent += `  ${fieldName}?: ${nestedInterfaceName};\n`;
-      } else {
-        const tsType = getTsTypeFromSchema(fieldSchema);
-        const description = fieldSchema.description ? ` // ${fieldSchema.description}` : '';
-        mainInterfaceContent += `  ${fieldName}?: ${tsType};${description}\n`;
-      }
-    }
-  }
+//         // 在主接口中引用嵌套接口
+//         mainInterfaceContent += `  ${fieldName}?: ${nestedInterfaceName};\n`;
+//       } else {
+//         const tsType = getTsTypeFromSchema(fieldSchema);
+//         const description = fieldSchema.description ? ` // ${fieldSchema.description}` : '';
+//         mainInterfaceContent += `  ${fieldName}?: ${tsType};${description}\n`;
+//       }
+//     }
+//   }
 
-  return { mainInterfaceContent, extraInterfaces };
-}
+//   return { mainInterfaceContent, extraInterfaces };
+// }
 
 /**
  * 处理data本身是数组的响应体
  * @param {Object} dataSchema - data属性的Schema
  * @returns {string} 生成的接口内容
  */
-function handleArrayResponse(dataSchema) {
-  let interfaceContent = '';
+// function handleArrayResponse(dataSchema) {
+//   let interfaceContent = '';
 
-  if (dataSchema.items) {
-    if (dataSchema.items.properties) {
-      // 数组中的元素是对象
-      interfaceContent += '  // data是对象数组\n';
-      interfaceContent += '  items?: Array<{\n';
+//   if (dataSchema.items) {
+//     if (dataSchema.items.properties) {
+//       // 数组中的元素是对象
+//       interfaceContent += '  // data是对象数组\n';
+//       interfaceContent += '  items?: Array<{\n';
 
-      // 使用通用函数，增加缩进级别
-      interfaceContent += generatePropertiesCode(dataSchema.items.properties, '    ');
+//       // 使用通用函数，增加缩进级别
+//       interfaceContent += generatePropertiesCode(dataSchema.items.properties, '    ');
 
-      interfaceContent += '  }>;\n';
-    } else {
-      // 数组中的元素是基本类型
-      const itemType = getTsTypeFromSchema(dataSchema.items);
-      interfaceContent += `  // data是${itemType}类型的数组\n`;
-      interfaceContent += `  items?: Array<${itemType}>;\n`;
-    }
-  } else {
-    interfaceContent += '  // 无法解析data数组结构\n';
-  }
+//       interfaceContent += '  }>;\n';
+//     } else {
+//       // 数组中的元素是基本类型
+//       const itemType = getTsTypeFromSchema(dataSchema.items);
+//       interfaceContent += `  // data是${itemType}类型的数组\n`;
+//       interfaceContent += `  items?: Array<${itemType}>;\n`;
+//     }
+//   } else {
+//     interfaceContent += '  // 无法解析data数组结构\n';
+//   }
 
-  return interfaceContent;
-}
+//   return interfaceContent;
+// }
 
 // export interface TestData {
 //   gameId: string
@@ -381,12 +385,105 @@ function handleArrayResponse(dataSchema) {
 // }
 
 // 将JSON Schema转换为TypeScript接口
-export function generaterInterface(interfaceName, schema, interfaceContent = '') {
-  // type 为object或array时，需要递归处理， 否则直接转类型即可，array更为特殊，array中子项的schema在items字段下 interfaceContent 为当前接口的内容，在递归时需要传递
-  interfaceContent = !interfaceContent ? `export interface ${interfaceName} {\n` : interfaceContent
-  if (schema.type === 'object' || schema.type === 'array') {
-    // 递归处理
+export function generaterSchemaInterface(interfaceName, schema, attrName = 'data', isTopLevel = true) {
+  // 递归处理JSON Schema，生成TypeScript接口
+  if (isTopLevel) {
+    // 顶层调用，生成完整接口
+    let interfaceContent = `export interface ${interfaceName} {\n`;
+    interfaceContent += generateSchemaContent(schema, '  ', attrName);
+    interfaceContent += '}\n';
+    return interfaceContent;
+  } else {
+    // 非顶层调用，只生成类型定义部分
+    return generateSchemaContent(schema, '', attrName);
   }
+}
+
+// 生成Schema内容的辅助函数
+function generateSchemaContent(schema, indent = '', attrName = 'data') {
+  let content = '';
+
+  if (schema.type === 'object' && schema.properties) {
+    // 处理对象类型
+    if (attrName !== 'data') {
+      content += `${indent}${attrName}?: {\n`;
+      indent += '  ';
+    }
+
+    for (const [fieldName, fieldSchema] of Object.entries(schema.properties)) {
+      content += generateSchemaContent(fieldSchema, indent, fieldName);
+    }
+
+    if (attrName !== 'data') {
+      indent = indent.slice(0, -2);
+      content += `${indent}};\n`;
+    }
+  } else if (schema.type === 'array' && schema.items) {
+    // 处理数组类型
+    if (schema.items.type === 'object' && schema.items.properties) {
+      // 数组中是对象
+      content += `${indent}${attrName}?: Array<{\n`;
+
+      for (const [fieldName, fieldSchema] of Object.entries(schema.items.properties)) {
+        content += generateSchemaContent(fieldSchema, indent + '  ', fieldName);
+      }
+
+      content += `${indent}}>; // ${attrName}是对象数组\n`;
+    } else {
+      // 数组中是基本类型
+      const itemType = getTsTypeFromSchema(schema.items);
+      content += `${indent}${attrName}?: Array<${itemType}>; // ${attrName}是${itemType}类型的数组\n`;
+    }
+  } else {
+    // 处理基本类型
+    const tsType = getTsTypeFromSchema(schema);
+    const description = schema.description ? ` // ${schema.description}` : '';
+    content += `${indent}${attrName}?: ${tsType};${description}\n`;
+  }
+
+  return content;
+}
+
+export function generaterOtherInterface(interfaceName, data) {
+  if (!data || !data.length) {
+    return `export interface ${interfaceName} {\n  // 无参数 \n}`
+  }
+  let interfaceContent = `export interface ${interfaceName} {\n`
+  // 对于其他类型（form，query），只解析一层
+  for (const value of data) {
+    interfaceContent += `  ${value.name}${value.required ? '' : '?'}: ${getTsTypeFromSchema(value)};\n`
+  }
+  interfaceContent += '}\n'
+  return interfaceContent
+}
+
+// 确定schema来源
+export function decideWhichSchemaType(type = 'req', data) {
+  let schemaData = null
+  let schemaType = ''
+  switch (type) {
+    case 'req':
+      if (data.req_body_is_json_schema && data.req_body_type === 'json') {
+        schemaData = JSON.parse(data.req_body_other)
+        schemaType = 'json'
+      } else if (!data.req_body_is_json_schema && data.req_body_type === 'form') {
+        schemaData = data.req_body_form
+        schemaType = 'form'
+      } else if (data.req_query && data.req_query.length) {
+        schemaData = data.req_query
+        schemaType = 'query'
+      }
+      break;
+    case 'res':
+      if (data.res_body_is_json_schema && data.res_body_type === 'json') {
+        schemaData = JSON.parse(data.res_body).properties.data
+        schemaType = 'json'
+      }
+      break;
+    default:
+      break;
+  }
+  return { schemaData, schemaType }
 }
 
 /**
@@ -394,78 +491,78 @@ export function generaterInterface(interfaceName, schema, interfaceContent = '')
  * @param {Object} schema - 响应体JSON Schema对象
  * @returns {string} 格式化的TypeScript接口字符串
  */
-export function generateVOInterfaceFromSchema(interfaceName, data) {
-  // 解析响应体JSON Schema生成VO
-  let schema = null;
-  if (data.res_body_is_json_schema && data.res_body) {
-    try {
-      schema = JSON.parse(data.res_body);
-    } catch (error) {
-      schema.error('解析响应体JSON Schema失败:', error);
-    }
-  }
-  if (!schema) {
-    return `export interface ${interfaceName} {\n  // 无法解析响应体结构\n}`;
-  }
-  console.log('res--------------------------schema', schema)
-  // 默认返回空VO接口
-  let interfaceContent = `export interface ${interfaceName} {\n`;
-  let extraInterfaces = '';
+// export function generateVOInterfaceFromSchema(interfaceName, data) {
+//   // 解析响应体JSON Schema生成VO
+//   let schema = null;
+//   if (data.res_body_is_json_schema && data.res_body) {
+//     try {
+//       schema = JSON.parse(data.res_body);
+//     } catch (error) {
+//       schema.error('解析响应体JSON Schema失败:', error);
+//     }
+//   }
+//   if (!schema) {
+//     return `export interface ${interfaceName} {\n  // 无法解析响应体结构\n}`;
+//   }
+//   console.log('res--------------------------schema', schema)
+//   // 默认返回空VO接口
+//   let interfaceContent = `export interface ${interfaceName} {\n`;
+//   let extraInterfaces = '';
 
-  try {
-    // 尝试从响应体中提取data结构
-    if (schema && schema.properties && schema.properties.data) {
-      const dataSchema = schema.properties.data;
+//   try {
+//     // 尝试从响应体中提取data结构
+//     if (schema && schema.properties && schema.properties.data) {
+//       const dataSchema = schema.properties.data;
 
-      // 场景1: { data: {list: [{}], total: 100} } - 解析list中的对象
-      if (dataSchema.properties && dataSchema.properties.list && dataSchema.properties.list.type === 'array') {
-        interfaceContent += handleListItemsResponse(dataSchema.properties);
-      }
-      // 场景2: { xx: xx, yy: yy } - data本身是一个对象
-      else if (dataSchema.type === 'object' && Object.keys(dataSchema.properties).length > 0) {
-        // 检查是否是场景4: data是嵌套对象
-        const hasNestedObjects = Object.entries(dataSchema.properties).some(
-          ([_, fieldSchema]) => fieldSchema.type === 'object' && fieldSchema.properties
-        );
+//       // 场景1: { data: {list: [{}], total: 100} } - 解析list中的对象
+//       if (dataSchema.properties && dataSchema.properties.list && dataSchema.properties.list.type === 'array') {
+//         interfaceContent += handleListItemsResponse(dataSchema.properties);
+//       }
+//       // 场景2: { xx: xx, yy: yy } - data本身是一个对象
+//       else if (dataSchema.type === 'object' && Object.keys(dataSchema.properties).length > 0) {
+//         // 检查是否是场景4: data是嵌套对象
+//         const hasNestedObjects = Object.entries(dataSchema.properties).some(
+//           ([_, fieldSchema]) => fieldSchema.type === 'object' && fieldSchema.properties
+//         );
 
-        if (hasNestedObjects) {
-          const { mainInterfaceContent, nestedInterfaces } = handleNestedObjectResponse(dataSchema);
-          interfaceContent += mainInterfaceContent;
-          extraInterfaces = nestedInterfaces;
-        } else {
-          interfaceContent += handleObjectResponse(dataSchema);
-        }
-      }
-      // 场景4: data本身是一个数组
-      else if (dataSchema.type === 'array') {
-        // data本身是数组，只处理数组中的对象就行，不需要给VO的定义中添加array之类的
-        interfaceContent += handleObjectResponse(dataSchema.items);
-      }
-      // 场景5: data: 123 - data本身是一个基础类型
-      else if (dataSchema.type && !dataSchema.properties) {
-        interfaceContent += handlePrimitiveResponse(dataSchema);
-      }
-      // 其他情况
-      else {
-        interfaceContent += '  // 无法识别的data结构类型\n';
-      }
-    } else {
-      interfaceContent += '  // 无法解析响应体结构\n';
-    }
-  } catch (error) {
-    console.error('生成VO接口失败:', error);
-    interfaceContent += '  // 生成VO接口时发生错误\n';
-  }
+//         if (hasNestedObjects) {
+//           const { mainInterfaceContent, nestedInterfaces } = handleNestedObjectResponse(dataSchema);
+//           interfaceContent += mainInterfaceContent;
+//           extraInterfaces = nestedInterfaces;
+//         } else {
+//           interfaceContent += handleObjectResponse(dataSchema);
+//         }
+//       }
+//       // 场景4: data本身是一个数组
+//       else if (dataSchema.type === 'array') {
+//         // data本身是数组，只处理数组中的对象就行，不需要给VO的定义中添加array之类的
+//         interfaceContent += handleObjectResponse(dataSchema.items);
+//       }
+//       // 场景5: data: 123 - data本身是一个基础类型
+//       else if (dataSchema.type && !dataSchema.properties) {
+//         interfaceContent += handlePrimitiveResponse(dataSchema);
+//       }
+//       // 其他情况
+//       else {
+//         interfaceContent += '  // 无法识别的data结构类型\n';
+//       }
+//     } else {
+//       interfaceContent += '  // 无法解析响应体结构\n';
+//     }
+//   } catch (error) {
+//     console.error('生成VO接口失败:', error);
+//     interfaceContent += '  // 生成VO接口时发生错误\n';
+//   }
 
-  interfaceContent += '}';
+//   interfaceContent += '}';
 
-  // 如果有额外的接口，将它们添加到主接口之前
-  if (extraInterfaces) {
-    return extraInterfaces + interfaceContent;
-  }
+//   // 如果有额外的接口，将它们添加到主接口之前
+//   if (extraInterfaces) {
+//     return extraInterfaces + interfaceContent;
+//   }
 
-  return interfaceContent;
-}
+//   return interfaceContent;
+// }
 
 /**
  * 从接口文档生成TypeScript类型定义（DTO和VO）
@@ -486,11 +583,49 @@ export async function generateTypeScriptTypes(apiData) {
     const projectid = data.project_id;
 
     // 生成DTO TypeScript接口
-    const dtoInterface = generateInterfaceFromSchema('DTO', data);
+    // const dtoInterface = generateInterfaceFromSchema('DTO', data);
 
     // 生成VO TypeScript接口
-    const voInterface = generateVOInterfaceFromSchema('VO', data);
+    // const voInterface = generateVOInterfaceFromSchema('VO', data);
 
+    let DTO = ''
+    let VO = ''
+    try {
+      const { schemaData: reqSchemaData, schemaType: reqSchemaType } = decideWhichSchemaType('req', data)
+      if (reqSchemaType !== 'json') {
+        DTO = generaterOtherInterface('DTO', reqSchemaData)
+        console.log('DTO ', DTO)
+      } else {
+        DTO = generaterSchemaInterface('DTO', reqSchemaData)
+        console.log('DTO ', DTO)
+      }
+    } catch (error) {
+      console.error('生成DTO接口失败:', error);
+      DTO = '  // 生成DTO接口时发生错误\n';
+    }
+
+    const { schemaData: reqSchemaData, schemaType: reqSchemaType } = decideWhichSchemaType('req', data)
+    if (reqSchemaType !== 'json') {
+      DTO = generaterOtherInterface('DTO', reqSchemaData)
+      console.log('DTO ', DTO)
+    } else {
+      DTO = generaterSchemaInterface('DTO', reqSchemaData)
+      console.log('DTO ', DTO)
+    }
+
+    try {
+      const { schemaData: resSchemaData, schemaType: resSchemaType } = decideWhichSchemaType('res', data)
+      if (resSchemaType !== 'json') {
+        VO = generaterOtherInterface('VO', resSchemaData)
+        console.log('VO ', VO)
+      } else {
+        VO = generaterSchemaInterface('VO', resSchemaData)
+        console.log('VO ', VO)
+      }
+    } catch (error) {
+      console.error('生成VO接口失败:', error);
+      VO = '  // 生成VO接口时发生错误\n';
+    }
     return {
       url,
       method,
@@ -498,8 +633,8 @@ export async function generateTypeScriptTypes(apiData) {
       catid,
       projectid,
       title,
-      DTO: dtoInterface,
-      VO: voInterface
+      DTO,
+      VO
     };
   } catch (error) {
     console.error('生成TypeScript类型定义失败:', error);

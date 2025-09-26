@@ -2,11 +2,20 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 10:13:24
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-16 15:58:02
- * @FilePath: \converYapi2Ts\background.js
+ * @LastEditTime: 2025-09-26 10:56:13
+ * @FilePath: /converYapi2Ts/background.js
  * @Description:
  */
-import { copyToClipboard, getUrlType, cacheKey, projectCacheKey, handleGetCacheData, handleSetCacheData } from './utils.js';
+import {
+  copyToClipboard,
+  getUrlType,
+  cacheKey,
+  projectCacheKey,
+  handleGetCacheData,
+  handleSetCacheData,
+  handleGetTreeCacheData,
+  handleClearCacheData
+} from './utils.js';
 import { getSingleInterfaceApi, getGroupInterfaceApi, getProjectBaseApi } from './getInterFace.js';
 import { generateTypeScriptTypes } from './typeMapping.js';
 
@@ -15,11 +24,6 @@ var urlType = null
 var extraFn = null
 // 创建右键菜单项
 chrome.runtime.onInstalled.addListener(() => {
-  // chrome.contextMenus.create({
-  //   id: 'copyInterface',
-  //   title: '复制接口',
-  //   contexts: ['page', 'selection', 'link', 'editable', 'image', 'video', 'audio']
-  // });
   const mainMenuId = chrome.contextMenus.create({
     id: 'mainMenu',
     title: 'Yapi2Ts工具',
@@ -52,43 +56,45 @@ chrome.runtime.onInstalled.addListener(() => {
 // 监听右键菜单点击事件
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'copyAsTs') {
-    if (urlType && urlType.type === 'single') {
-      const data = await handleGetCacheData(cacheKey, 'id', urlType.id)
-      if (data) {
-        const copyText = data.DTO + '\n\n' + data.VO
-        chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          function: copyToClipboard,
-          args: [copyText]
-        });
-      }
-    }
+    await handleCopyApi(tab)
   }
-  // if (info.menuItemId === 'copyInterface') {
-  //   console.log('复制接口', info);
-  //   // 向剪贴板中写入内容
-  //   setTimeout(() => {
-  //     chrome.scripting.executeScript({
-  //       target: { tabId: tab.id },
-  //       function: copyToClipboard,
-  //       args: ['gagaga111']
-  //     });
-  //   }, 1000);
-  //   getLocalStorage('yapi2ts').then(data => {
-  //     console.log('获取到的存储数据:', data);
-  //   });
-  //   setLocalStorage('yapi2ts', [])
-  // }
+  if (info.menuItemId === 'clearCurrentCache') {
+    await handleClearCurrentCache()
+  }
+  if (info.menuItemId === 'clearAllCache') {
+    await handleClearAllCache()
+  }
 });
 
+// 接受content.js发送的消息
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.url) {
+  console.log('background.js收到消息:', 'message: ', message, 'sender: ', sender, 'sendResponse: ', sendResponse, new Date().getTime());
+
+  if (message.type === 'pageLoaded' && message.url) {
     urlObj = {
       ...message
     }
     handleSetInterface()
+    sendResponse({ success: true, message: '页面信息已处理' });
   }
-  console.log('background.js收到消息:', message, sender, sendResponse, new Date().getTime());
+
+  if (message.type === 'copyItem') {
+    urlObj = {
+      ...message
+    }
+    urlType = getUrlType(urlObj.url);
+    handleCopyApi(sender.tab).then(res => {
+      sendResponse({ success: true })
+    }).catch(err => {
+      console.error('复制TS类型失败:', err);
+      sendResponse({ success: false, error: err.message })
+    })
+    // 返回true以支持异步响应
+    return true;
+  }
+
+  // 对于其他类型的消息，立即返回成功响应
+  sendResponse({ success: true, message: '消息已接收' });
 });
 
 async function handleSetInterface() {
@@ -114,6 +120,8 @@ async function handleSetSingle() {
   const result = await generateTypeScriptTypes(res)
   await handleSetCacheData(cacheKey, result, 'id')
   console.log('获取到的单个接口数据:', res, '转换数据:', result);
+  const treeData = await handleGetTreeCacheData()
+  console.log('treeData', JSON.stringify(treeData));
 }
 
 async function handleSetGroup() {
@@ -143,19 +151,41 @@ async function handleGetProjectInfo() {
   }, 'id')
 }
 
-// 获取当前页面的cookie和localStorage信息
-function getCurrentPageInfo(url) {
-  if (!url) return;
+async function handleCopyApi(tab) {
   try {
-    const urlObj = new URL(url);
-    const domain = urlObj.hostname;
-    // 获取cookie
-    chrome.cookies.getAll({ domain }, (cookies) => {
-      console.log('当前域名下的Cookie:', cookies);
-      // 可以将cookie信息存储到本地存储或者发送到popup页面
-      // chrome.storage.local.set({ 'currentCookies': cookies });
-    });
+    if (urlType && urlType.type === 'single') {
+      const data = await handleGetCacheData(cacheKey, 'id', urlType.id)
+      if (data) {
+        const copyText = data.DTO + '\n\n' + data.VO
+        chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          function: copyToClipboard,
+          args: [copyText]
+        });
+      } else {
+        console.warn('未找到缓存数据，尝试重新获取接口信息');
+        // 如果没有缓存数据，尝试重新获取
+        if (urlObj) {
+          await handleSetInterface();
+          // 延迟再次尝试复制
+          setTimeout(() => handleCopyApi(tab), 500);
+        }
+      }
+    } else {
+      console.warn('URL类型无效或不是单个接口页面');
+    }
   } catch (error) {
-    console.error('获取页面信息失败:', error);
+    console.error('处理复制API时出错:', error);
   }
+}
+
+async function handleClearCurrentCache() {
+  if (urlType && urlType.type === 'single') {
+    await handleClearCacheData(cacheKey, 'id', urlType.id)
+  }
+}
+
+async function handleClearAllCache() {
+  await handleClearCacheData(cacheKey)
+  await handleClearCacheData(projectCacheKey)
 }

@@ -2,7 +2,7 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 11:44:10
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-16 15:31:18
+ * @LastEditTime: 2025-09-22 16:11:39
  * @FilePath: \converYapi2Ts\utils.js
  * @Description:
  */
@@ -24,7 +24,7 @@ export function copyToClipboard(text, successMessage = '', callback = null) {
       navigator.clipboard.writeText(text).then(() => {
         console.log('使用Clipboard API复制成功');
         if (successMessage) {
-          alert(successMessage);
+          console.log(successMessage);
         }
         if (callback) callback(true);
       })
@@ -42,7 +42,7 @@ export function copyToClipboard(text, successMessage = '', callback = null) {
       console.log('使用document.execCommand复制成功:', success);
 
       if (success && successMessage) {
-        alert(successMessage);
+        console.log(successMessage);
       }
       document.body.removeChild(textArea);
     }
@@ -199,4 +199,36 @@ export async function handleSetCacheData(key, data, uniqueKey) {
     return
   }
   await setLocalStorage(key, [...cacheData, data])
+}
+
+// 根据缓存key、或项目的唯一键进行清理缓存
+export async function handleClearCacheData(key, uniqueKey = '', uniqueValue) {
+  const cacheData = await handleGetCacheData(key)
+  if (!cacheData) {
+    return
+  }
+  if (uniqueKey) {
+    const newCacheData = cacheData.filter(item => item[uniqueKey] !== uniqueValue)
+    await setLocalStorage(key, newCacheData)
+    return
+  }
+  await setLocalStorage(key, [])
+}
+
+export async function handleGetTreeCacheData() {
+  // 将缓存的数据转换为树结构，在popup中显示
+  const projectData = await handleGetCacheData(projectCacheKey)
+  const cacheData = await handleGetCacheData(cacheKey)
+  if (!projectData) {
+    return null
+  }
+  projectData.forEach(item => {
+    item.children = item.cat
+    item.children.forEach(cat => {
+      const children = cacheData.filter(item => item.catid === cat._id)
+      cat.children = children
+    })
+    item.cat = null
+  })
+  return projectData
 }

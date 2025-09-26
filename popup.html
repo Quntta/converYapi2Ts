@@ -2,100 +2,248 @@
  * @Author: likunda 980765465@qq.com
  * @Date: 2025-09-03 10:14:09
  * @LastEditors: likunda 980765465@qq.com
- * @LastEditTime: 2025-09-03 11:19:11
+ * @LastEditTime: 2025-09-22 16:08:04
  * @FilePath: \converYapi2Ts\popup.html
- * @Description: 
+ * @Description:
 -->
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>yapi转ts接口复制工具</title>
-  <style>
-    body {
-      width: 500px;
-      padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      color: #333;
-      background-color: #f5f5f5;
-      margin: 0;
-    }
-    h1 {
-      font-size: 18px;
-      margin-top: 0;
-      margin-bottom: 16px;
-      color: #2c3e50;
-    }
-    .section {
-      margin-bottom: 20px;
-      padding: 12px;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .section h2 {
-      font-size: 14px;
-      margin-top: 0;
-      margin-bottom: 8px;
-      color: #34495e;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 4px;
-    }
-    .data-container {
-      max-height: 200px;
-      overflow-y: auto;
-      font-size: 12px;
-      background-color: #f8f9fa;
-      padding: 8px;
-      border-radius: 4px;
-      font-family: 'Courier New', Courier, monospace;
-    }
-    .no-data {
-      color: #95a5a6;
-      font-style: italic;
-    }
-    button {
-      background-color: #3498db;
-      color: white;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 14px;
-      margin-top: 8px;
-    }
-    button:hover {
-      background-color: #2980b9;
-    }
-  </style>
-</head>
-<body>
-  <h1>接口复制工具</h1>
-  
-  <div class="section">
-    <h2>当前页面信息</h2>
-    <div class="data-container" id="pageInfo">
-      <span class="no-data">页面加载中...</span>
+
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>yapi转ts接口复制工具</title>
+    <style>
+      body {
+        width: 500px;
+        padding: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        color: #333;
+        background-color: #f5f5f5;
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 18px;
+        margin-top: 0;
+        margin-bottom: 16px;
+        color: #2c3e50;
+      }
+
+      .section {
+        margin-bottom: 20px;
+        padding: 12px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .section h2 {
+        font-size: 14px;
+        margin-top: 0;
+        margin-bottom: 8px;
+        color: #34495e;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 4px;
+      }
+
+      .data-container {
+        max-height: 200px;
+        overflow-y: auto;
+        font-size: 12px;
+        background-color: #f8f9fa;
+        padding: 8px;
+        border-radius: 4px;
+        font-family: 'Courier New', Courier, monospace;
+      }
+
+      .no-data {
+        color: #95a5a6;
+        font-style: italic;
+      }
+
+      button {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-top: 8px;
+      }
+
+      button:hover {
+        background-color: #2980b9;
+      }
+
+      /* 树形结构样式 */
+      .tree-container {
+        font-size: 13px;
+      }
+
+      .tree-node {
+        margin-bottom: 3px;
+      }
+
+      .node-header {
+        display: flex;
+        align-items: center;
+        padding: 4px 6px;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .node-header:hover {
+        background-color: #f0f0f0;
+      }
+
+      .toggle-icon {
+        margin-right: 6px;
+        font-size: 8px;
+        color: #666;
+        width: 10px;
+        text-align: center;
+      }
+
+      .node-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .tree-children {
+        margin-left: 16px;
+        margin-top: 3px;
+      }
+
+      .project-node .node-header {
+        background-color: #e8f4fd;
+        font-weight: bold;
+      }
+
+      .category-node .node-header {
+        background-color: #f1f3f4;
+      }
+
+      .api-node .node-header {
+        background-color: #ffffff;
+        border-left: 3px solid #3498db;
+      }
+
+      .copy-button {
+        margin-top: 0;
+        margin-left: 6px;
+        padding: 3px 8px;
+        font-size: 11px;
+        min-width: 40px;
+        background-color: #2ecc71;
+        transition: all 0.3s ease;
+      }
+
+      .copy-button:hover {
+        background-color: #27ae60;
+      }
+
+      .copy-button:disabled {
+        background-color: #95a5a6;
+        cursor: not-allowed;
+        color: white;
+      }
+
+      .api-method {
+        display: inline-block;
+        min-width: 45px;
+        text-align: center;
+        margin-right: 6px;
+        padding: 1px 4px;
+        background-color: #3498db;
+        color: white;
+        border-radius: 2px;
+        font-size: 10px;
+        font-weight: bold;
+      }
+
+      /* 调整data-container的样式以适应树形结构 */
+      #apiList.data-container {
+        max-height: 300px;
+        background-color: white;
+        border: 1px solid #e0e0e0;
+      }
+
+      .template-textarea {
+        width: 100%;
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>接口复制工具</h1>
+
+    <div class="section">
+      <h2>当前页面信息</h2>
+      <div class="data-container" id="pageInfo">
+        <span class="no-data">页面加载中...</span>
+      </div>
     </div>
-  </div>
-  
-  <!-- <div class="section">
+
+    <!-- <div class="section">
     <h2>本地存储 (LocalStorage)</h2>
     <div class="data-container" id="localStorageData">
       <span class="no-data">未获取到数据</span>
     </div>
     <button id="copyLocalStorage">复制LocalStorage</button>
   </div> -->
-  
-  <div class="section">
-    <h2>Cookie 信息</h2>
-    <div class="data-container" id="cookieData">
-      <span class="no-data">未获取到数据</span>
+    <div class="section">
+      <h2>接口列表</h2>
+      <div class="data-container" id="apiList">
+        <span class="no-data">未获取到数据</span>
+      </div>
     </div>
-    <button id="copyCookies">复制Cookies</button>
-  </div>
 
-  <script src="popup.js" type="module"></script>
-</body>
+    <!-- <div class="section">
+      <h2>设置接口模板</h2>
+      <div class="data-container" id="apiTemplate">
+        <textarea class="template-textarea" id="templateText" rows="4" placeholder="请填入接口模板"></textarea>
+        <div>
+        </div>
+      </div>
+    </div> -->
+
+    <!-- <div class="section">
+      <h2>设置自定义函数</h2>
+      <div class="data-container" id="customFunction">
+        <textarea class="template-textarea" id="templateText" rows="4" placeholder="请填入自定义函数"></textarea>
+        <p>
+          自定义函数接受一个参数 apiObject: {
+          DTO: string;
+          VO: string;
+          catid: number;
+          id: number;
+          method: string;
+          projectid: number;
+          title: string;
+          url: string;
+          }
+        </p>
+        <div>
+          <button id="saveCustomFunction">保存</button>
+        </div>
+      </div>
+    </div> -->
+
+    <div class="section">
+      <h2>Cookie 信息</h2>
+      <div class="data-container" id="cookieData">
+        <span class="no-data">未获取到数据</span>
+      </div>
+      <button id="copyCookies">复制Cookies</button>
+    </div>
+
+    <script src="popup.js" type="module"></script>
+  </body>
+
 </html>
